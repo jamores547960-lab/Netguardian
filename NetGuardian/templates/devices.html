@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NetGuardian - Device Inventory</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5f8fe;
+      --surface: #ffffff;
+      --surface-soft: #f9fbff;
+      --line: #edf2f7;
+      --text: #132238;
+      --muted: #5d728d;
+      --blue: #1b3b6f;
+      --shadow: rgba(15, 35, 71, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: linear-gradient(135deg, #f5f8fe 0%, #eefaf8 100%); color: var(--text); font: 14px 'Segoe UI', sans-serif; }
+    .shell { max-width: 1250px; margin: auto; padding: 42px 24px; }
+    .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 26px; }
+    .top h1 { font-size: 28px; margin: 0 0 5px; color: var(--text); }
+    .top p { margin: 0; color: var(--muted); }
+    .back { color: var(--blue); font-weight: 700; text-decoration: none; }
+    
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+    .metric { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 15px; box-shadow: 0 10px 24px var(--shadow); }
+    .metric small { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .4px; display: block; }
+    .metric strong { display: block; font-size: 25px; margin-top: 6px; color: var(--text); }
+
+    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; box-shadow: 0 10px 24px var(--shadow); }
+    .panel-head { padding: 17px 19px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; flex-wrap: gap; gap: 12px; }
+    .panel-head h2 { font-size: 17px; margin: 0 0 3px; color: var(--text); }
+    .panel-head p { color: var(--muted); font-size: 12px; margin: 0; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .5px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+    td { padding: 14px 16px; border-bottom: 1px solid var(--line); color: #2b3d5c; vertical-align: middle; }
+    tr:last-child td { border: 0; }
+
+    .tag { display: inline-block; border-radius: 999px; padding: 5px 10px; font-size: 11px; font-weight: 800; }
+    .trusted { background: #ebfaf5; color: #0f766e; border: 1px solid rgba(15,118,110,0.12); }
+    .review { background: #fff7e8; color: #a16207; border: 1px solid rgba(161,98,7,0.12); }
+    .threat { background: #fff1f2; color: #b91c1c; border: 1px solid rgba(185,28,28,0.12); }
+    .blocked { background: #eff5ff; color: #1d4ed8; border: 1px solid rgba(29,78,216,0.12); }
+    
+    .button { border: 0; border-radius: 10px; padding: 8px 12px; font-size: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+    .block { background: linear-gradient(135deg, #1b3b6f 0%, #305ea0 100%); color: white; }
+    .block:hover { filter: brightness(1.03); }
+    .unblock, .trust { background: linear-gradient(135deg, #edf4ff 0%, #eaf9f8 100%); color: var(--blue); border: 1px solid #dfeaf9; }
+    .unblock:hover, .trust:hover { filter: brightness(0.98); }
+    .empty { padding: 45px; text-align: center; color: var(--muted); }
+
+    .modal-content { background-color: #ffffff; color: #132238; border: 1px solid var(--line); border-radius: 18px; }
+    .modal-header { border-bottom: 1px solid var(--line); }
+    .modal-footer { border-top: 1px solid var(--line); }
+    .form-control, .form-select { background-color: #ffffff; border-color: #dfe9f8; color: #132238; }
+    .form-control:focus, .form-select:focus { background-color: #ffffff; border-color: #1b3b6f; color: #132238; box-shadow: 0 0 0 3px rgba(27,59,111,0.08); }
+
+    @media (max-width: 750px) {
+      .shell { padding: 22px 12px; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .top { align-items: flex-start; gap: 14px; }
+      .panel { overflow-x: auto; }
+      table { min-width: 850px; }
+    }
+  </style>
+</head>
+<body>
+  {% include '_sidebar.html' %}
+  <main class="shell">
+    <header class="top">
+      <div>
+        <h1><i class="fa-solid fa-laptop" style="color:#65a8ff"></i> Device Inventory</h1>
+        <p>Real-time active devices detected on the protected subnet.</p>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <form method="post" action="{{ url_for('scan_network') }}" class="m-0">
+          <button type="submit" class="btn btn-sm btn-primary d-flex align-items-center gap-2 px-3 py-2 rounded-pill shadow-sm" style="font-weight:600;">
+            <i class="fa-solid fa-satellite-dish"></i> Scan Real Network
+          </button>
+        </form>
+        {% if session.get('role') == 'Whitelist Manager' %}
+        <button type="button" class="btn btn-sm btn-outline-light d-flex align-items-center gap-2 px-3 py-2 rounded-pill" data-bs-toggle="modal" data-bs-target="#addDeviceModal">
+          <i class="fa-solid fa-plus"></i> Add IP / Device
+        </button>
+        {% endif %}
+        <a class="back ms-2" href="{{ url_for('dashboard') }}"><i class="fa-solid fa-arrow-left"></i> Dashboard</a>
+      </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show mb-4 rounded-3 border-0" role="alert" style="background: rgba(30, 41, 59, 0.9); border: 1px solid #3b82f6; color: #dbeafe;">
+            <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+            {{ message }}
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <section class="metrics">
+      <div class="metric"><small>TOTAL DEVICES</small><strong>{{ devices|length }}</strong></div>
+      <div class="metric"><small>TRUSTED</small><strong>{{ trusted_count }}</strong></div>
+      <div class="metric"><small>REVIEW REQUIRED</small><strong>{{ review_count }}</strong></div>
+      <div class="metric"><small>BLOCKED</small><strong>{{ blocked_count }}</strong></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Network Devices</h2>
+          <p>Real IP addresses, MAC addresses, and active threat status.</p>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Last Seen</th>
+            <th>IP Address</th>
+            <th>Device Name</th>
+            <th>MAC Address</th>
+            <th>Security State</th>
+            <th>Access</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for device in devices %}
+          <tr>
+            <td>{{ device.last_seen }}</td>
+            <td>
+              <strong class="text-white">{{ device.ip_address }}</strong>
+              {% if 'Host' in device.device_name %}
+                <span class="badge bg-primary ms-1" style="font-size: 9px;"><i class="fa-solid fa-laptop me-1"></i> Host PC</span>
+              {% elif device.status == 'green' and ('Gateway' in device.device_name or 'Router' in device.device_name) %}
+                <span class="badge bg-success ms-1" style="font-size: 9px;"><i class="fa-solid fa-wifi me-1"></i> Real Router</span>
+              {% elif device.status == 'red' %}
+                <span class="badge bg-danger ms-1" style="font-size: 9px;"><i class="fa-solid fa-triangle-exclamation me-1"></i> Attacker</span>
+              {% endif %}
+            </td>
+            <td>{{ device.device_name }}</td>
+            <td><code>{{ device.mac_address }}</code></td>
+            <td>
+              {% if device.status == 'red' %}
+                <span class="tag threat"><i class="fa-solid fa-triangle-exclamation me-1"></i> Spoofing threat</span>
+              {% elif device.status == 'yellow' %}
+                <span class="tag review"><i class="fa-solid fa-clock me-1"></i> Review required</span>
+              {% else %}
+                <span class="tag trusted"><i class="fa-solid fa-check-circle me-1"></i> Trusted device</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if device.is_blocked %}
+                <span class="tag blocked"><i class="fa-solid fa-ban me-1"></i> Blocked</span>
+              {% else %}
+                <span class="tag trusted"><i class="fa-solid fa-wifi me-1"></i> Allowed</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if device.is_blocked %}
+                <form method="post" action="{{ url_for('unblock_device', device_id=device.id) }}">
+                  <button class="button unblock"><i class="fa-solid fa-unlock me-1"></i> Unblock</button>
+                </form>
+              {% elif device.status == 'red' %}
+                <form method="post" action="{{ url_for('block_device', device_id=device.id) }}">
+                  <button class="button block"><i class="fa-solid fa-ban me-1"></i> Block device</button>
+                </form>
+              {% elif device.status == 'yellow' and session.get('role') == 'Whitelist Manager' %}
+                <form method="post" action="{{ url_for('trust_device', device_id=device.id) }}">
+                  <button class="button trust"><i class="fa-solid fa-shield-halved me-1"></i> Trust device</button>
+                </form>
+              {% else %}
+                <span style="color:#9aabc2; font-size: 12px;">Active & Safe</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="empty">No devices have been detected. Click "Scan Real Network" to discover live network devices.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <!-- Add Device Modal -->
+  <div class="modal fade" id="addDeviceModal" tabindex="-1" aria-labelledby="addDeviceModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post" action="{{ url_for('add_device') }}">
+          <div class="modal-header">
+            <h5 class="modal-title" id="addDeviceModalLabel"><i class="fa-solid fa-plus-circle text-primary me-2"></i> Register Network IP / Device</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label small text-muted">IP Address</label>
+              <input type="text" class="form-control" name="ip_address" placeholder="e.g. 192.168.1.50" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small text-muted">MAC Address (Optional)</label>
+              <input type="text" class="form-control" name="mac_address" placeholder="e.g. 00:1A:2B:3C:4D:5E">
+            </div>
+            <div class="mb-3">
+              <label class="form-label small text-muted">Device Name / Description</label>
+              <input type="text" class="form-control" name="device_name" placeholder="e.g. Finance Workstation" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small text-muted">Security State</label>
+              <select class="form-select" name="status">
+                <option value="green">Trusted (Green)</option>
+                <option value="yellow">Review Required (Yellow)</option>
+                <option value="red">Threat / Rogue (Red)</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary btn-sm">Save Device</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

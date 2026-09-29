@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NetGuardian - Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #edf4ff;
+      --bg-2: #eefaf8;
+      --surface: #ffffff;
+      --surface-soft: #f6f9ff;
+      --border: #dfeaf9;
+      --text: #152744;
+      --muted: #5d728d;
+      --primary: #1b3b6f;
+      --primary-2: #2f6ab2;
+      --secondary: #229690;
+      --accent: #f4b41a;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --shadow: rgba(15, 35, 71, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: linear-gradient(135deg, var(--bg) 0%, var(--bg-2) 100%); color: var(--text); font: 14px 'Segoe UI', sans-serif; }
+    .shell { max-width: 1260px; margin: auto; padding: 32px 24px 40px; }
+    .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 26px; gap: 20px; }
+    h1 { margin: 0 0 5px; font-size: 30px; color: var(--text); }
+    p { margin: 0; color: var(--muted); }
+    .user { padding: 10px 16px; border: 1px solid var(--border); border-radius: 12px; color: var(--primary); background: rgba(255,255,255,0.9); box-shadow: 0 12px 26px var(--shadow); }
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+    .metric, .panel, .quick { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 12px 30px var(--shadow); }
+    .metric { padding: 20px 18px; }
+    .metric small { display: block; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08rem; text-transform: uppercase; }
+    .metric strong { display: block; font-size: 30px; margin-top: 8px; font-weight: 800; }
+    .red { color: var(--danger); }
+    .blue { color: var(--primary-2); }
+    .green { color: var(--success); }
+    .amber { color: var(--accent); }
+    .layout { display: grid; grid-template-columns: 1.25fr .75fr; gap: 18px; }
+    .panel { overflow: hidden; }
+    .head { padding: 18px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .head h2 { font-size: 17px; margin: 0 0 3px; color: var(--text); }
+    .head p { font-size: 12px; margin: 0; color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08rem; padding: 12px 17px; border-bottom: 1px solid var(--border); }
+    td { padding: 13px 17px; color: #2b3f5d; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border: 0; }
+    .tag { background: rgba(220,38,38,0.08); color: #b91c1c; border: 1px solid rgba(220,38,38,0.15); border-radius: 999px; padding: 5px 9px; font-size: 10px; font-weight: 800; }
+    .empty { padding: 38px; text-align: center; color: var(--muted); }
+    .quick { padding: 18px; }
+    .quick h2 { font-size: 17px; margin: 0 0 14px; color: var(--text); }
+    .quick a, .quick button { display: flex; align-items: center; gap: 10px; padding: 12px; text-decoration: none; color: var(--text); border: 1px solid var(--border); border-radius: 12px; margin-top: 9px; width: 100%; background: var(--surface-soft); text-align: left; font-size: 14px; font-family: inherit; font-weight: 700; cursor: pointer; transition: 0.2s; }
+    .quick a:hover, .quick button:hover { border-color: rgba(27,59,111,0.25); background: linear-gradient(135deg,#edf4ff,#ecfbf9); color: var(--primary); }
+    .quick i { color: var(--primary-2); width: 16px; }
+    @media (max-width: 760px) {
+      .shell { padding: 22px 12px; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .layout { grid-template-columns: 1fr; }
+      .panel { overflow-x: auto; }
+      table { min-width: 600px; }
+    }
+  </style>
+</head>
+<body>
+  {% include '_sidebar.html' %}
+  <main class="shell">
+    <header class="top">
+      <div>
+        <h1><i class="fa-solid fa-table-cells" style="color:#65a8ff"></i> Security Dashboard</h1>
+        <p>Real-time network defense and IP monitoring for NetGuardian.</p>
+      </div>
+      <div class="d-flex align-items-center gap-3">
+        <form method="post" action="{{ url_for('scan_network') }}" class="m-0">
+          <button type="submit" class="btn btn-sm btn-primary d-flex align-items-center gap-2 px-3 py-2 rounded-pill shadow-sm" style="font-weight:600;">
+            <i class="fa-solid fa-satellite-dish"></i> Scan Real Network
+          </button>
+        </form>
+        <div class="user"><i class="fa-solid fa-user-shield text-primary me-2"></i> {{ session.get('username') }}</div>
+      </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show mb-4 rounded-3 border-0" role="alert" style="background: rgba(30, 41, 59, 0.9); border: 1px solid #3b82f6; color: #dbeafe;">
+            <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+            {{ message }}
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <section class="metrics">
+      <article class="metric"><small>KNOWN DEVICES</small><strong class="blue">{{ total_devices }}</strong></article>
+      <article class="metric"><small>ACTIVE THREATS</small><strong class="red">{{ active_threats }}</strong></article>
+      <article class="metric"><small>UNDER REVIEW</small><strong class="amber">{{ review_count }}</strong></article>
+      <article class="metric"><small>BLOCKED DEVICES</small><strong class="green">{{ blocked_count }}</strong></article>
+    </section>
+
+    <section class="layout">
+      <section class="panel">
+        <div class="head">
+          <div>
+            <h2>Current Threats</h2>
+            <p>Active spoofing alerts on the local subnet.</p>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>IP Address</th>
+              <th>Device</th>
+              <th>MAC Address</th>
+              <th>State</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for device in devices if device.status == 'red' and not device.is_blocked %}
+            <tr>
+              <td><strong class="text-white">{{ device.ip_address }}</strong></td>
+              <td>{{ device.device_name }}</td>
+              <td><code>{{ device.mac_address }}</code></td>
+              <td><span class="tag">Spoofing threat</span></td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="4" class="empty">
+                <i class="fa-solid fa-shield-halved fa-2x mb-2 text-success"></i><br>
+                No active spoofing threats on the network.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      <aside class="quick">
+        <h2>Quick Access</h2>
+        <form method="post" action="{{ url_for('scan_network') }}" class="m-0">
+          <button type="submit">
+            <i class="fa-solid fa-satellite-dish"></i> Scan Real Network
+          </button>
+        </form>
+        <a href="{{ url_for('dashboard') }}"><i class="fa-solid fa-tower-broadcast"></i> Live monitoring</a>
+        <a href="{{ url_for('alerts') }}"><i class="fa-solid fa-triangle-exclamation"></i> Review security alerts</a>
+        <a href="{{ url_for('devices') }}"><i class="fa-solid fa-laptop"></i> Manage devices</a>
+        <a href="{{ url_for('reports') }}"><i class="fa-solid fa-file-export"></i> Download reports</a>
+      </aside>
+    </section>
+
+    <section class="panel" style="margin-top:18px">
+      <div class="head">
+        <div>
+          <h2>Recent Response Activity</h2>
+          <p>Latest actions and scans recorded by NetGuardian.</p>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Handled By</th>
+            <th>Action</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in recent_logs %}
+          <tr>
+            <td>{{ log.timestamp }}</td>
+            <td>{{ log.handled_by }}</td>
+            <td><strong class="text-info">{{ log.action_taken }}</strong></td>
+            <td>{{ log.notes }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="4" class="empty">No response actions recorded yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

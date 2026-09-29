@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Network Security Status</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="d-flex align-items-center justify-content-center vh-100 bg-dark text-white">
+    <div class="text-center p-5 rounded border border-secondary shadow-lg">
+        <div class="mb-3">
+            <svg width="80" height="96" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M50 8L15 28V60C15 85 50 112 50 112C50 112 85 85 85 60V28L50 8Z" fill="#1b3b6f" stroke="#0e2347" stroke-width="3" stroke-linejoin="round"/>
+                <path d="M50 14L20 32V59C20 80 50 104 50 104C50 104 80 80 80 59V32L50 14Z" fill="none" stroke="#229690" stroke-width="2"/>
+                <circle cx="50" cy="42" r="10" fill="#229690" stroke="#1b3b6f" stroke-width="1.5"/>
+                <path d="M50 36V43" stroke="#1b3b6f" stroke-width="2.5" stroke-linecap="round"/>
+                <circle cx="50" cy="47" r="1.25" fill="#1b3b6f"/>
+                <path d="M35 62C40 57 60 57 65 62" stroke="#f4b41a" stroke-width="3" stroke-linecap="round" fill="none"/>
+                <path d="M40 70C43 67 57 67 60 70" stroke="#f4b41a" stroke-width="3" stroke-linecap="round" fill="none"/>
+                <circle cx="50" cy="78" r="2.5" fill="#f4b41a"/>
+            </svg>
+        </div>
+        <h1 class="display-4 fw-bold mb-3">NetGuardian</h1>
+        <p class="lead">Wi-Fi Network Security Check</p>
+        <hr class="my-4">
+
+        {% if is_safe %}
+            <div class="alert alert-success d-inline-block px-5 py-3 fs-4" role="alert">
+                🟢 <strong>SAFE</strong>: Network is Secure
+            </div>
+            <p class="mt-3 text-muted">No spoofing threats detected. Enjoy your browsing!</p>
+        {% else %}
+            <div class="alert alert-danger d-inline-block px-5 py-3 fs-4" role="alert">
+                🔴 <strong>WARNING</strong>: Threat Under Mitigation
+            </div>
+            <p class="mt-3 text-muted">Our monitoring team is resolving an active connection alert.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

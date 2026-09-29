@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block title %}NetGuardian - Login{% endblock %}
+
+{% block content %}
+<div class="login-shell">
+    <div class="login-card">
+        <div class="login-hero">
+            <div class="brand-mark">
+                <svg width="72" height="88" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="NetGuardian logo">
+                    <path d="M50 8L15 28V60C15 85 50 112 50 112C50 112 85 85 85 60V28L50 8Z" fill="#1b3b6f" stroke="#0e2347" stroke-width="3" stroke-linejoin="round"/>
+                    <path d="M50 14L20 32V59C20 80 50 104 50 104C50 104 80 80 80 59V32L50 14Z" fill="none" stroke="#229690" stroke-width="2"/>
+                    <circle cx="50" cy="42" r="10" fill="#229690" stroke="#1b3b6f" stroke-width="1.5"/>
+                    <path d="M50 36V43" stroke="#1b3b6f" stroke-width="2.5" stroke-linecap="round"/>
+                    <circle cx="50" cy="47" r="1.25" fill="#1b3b6f"/>
+                    <path d="M35 62C40 57 60 57 65 62" stroke="#f4b41a" stroke-width="3" stroke-linecap="round" fill="none"/>
+                    <path d="M40 70C43 67 57 67 60 70" stroke="#f4b41a" stroke-width="3" stroke-linecap="round" fill="none"/>
+                    <circle cx="50" cy="78" r="2.5" fill="#f4b41a"/>
+                </svg>
+            </div>
+            <span class="eyebrow">ON-SITE SPOOFING DETECTION</span>
+            <h1>Welcome back</h1>
+            <p>Secure access to the NetGuardian monitoring dashboard and threat response tools.</p>
+
+            <div class="security-points">
+                <div>
+                    <strong>24/7</strong>
+                    <span>Threat visibility</span>
+                </div>
+                <div>
+                    <strong>1-step</strong>
+                    <span>Secure sign-in</span>
+                </div>
+                <div>
+                    <strong>Live</strong>
+                    <span>Alerts</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="login-form-panel">
+            <div class="form-header">
+                <span class="mini-label">Secure login</span>
+                <h2>Sign in</h2>
+            </div>
+
+            <form action="{{ url_for('login') }}" method="POST" class="login-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="Enter username" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Gmail / Email address</label>
+                    <input type="email" id="email" name="email" placeholder="name@gmail.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter password" required>
+                </div>
+
+                <button type="submit" class="login-btn">
+                    Sign In &amp; Send OTP
+                </button>
+            </form>
+
+            <div class="login-links">
+                <a href="{{ url_for('register') }}">Create an account</a>
+                <a href="{{ url_for('public_status') }}">View public status</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

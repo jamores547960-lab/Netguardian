@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetGuardian - Security Analytics</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #f5f8fe;
+            --surface: #ffffff;
+            --surface-soft: #f9fbff;
+            --border: #edf2f7;
+            --text: #132238;
+            --muted: #5d728d;
+            --accent-blue: #1b3b6f;
+            --accent-green: #229690;
+            --accent-amber: #f4b41a;
+            --accent-red: #d93d47;
+            --shadow: rgba(15, 35, 71, 0.08);
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f8fe 0%, #eefaf8 100%);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .shell {
+            max-width: 1400px;
+            margin: auto;
+            padding: 30px 24px;
+        }
+
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: gap;
+        }
+
+        .top-header h1 {
+            margin: 0 0 4px;
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .top-header p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .card-dark {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 20px;
+            height: 100%;
+            box-shadow: 0 12px 28px var(--shadow);
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .card-dark:hover {
+            border-color: #dbe7fb;
+        }
+
+        .kpi-title {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .kpi-value {
+            font-size: 30px;
+            font-weight: 800;
+            color: var(--text);
+            margin: 10px 0 4px;
+            line-height: 1;
+        }
+
+        .kpi-sub {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 260px;
+            width: 100%;
+        }
+
+        .table-custom {
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--text);
+            border-color: var(--border);
+            font-size: 13px;
+        }
+
+        .table-custom th {
+            color: var(--muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border);
+            padding: 12px 14px;
+        }
+
+        .table-custom td {
+            border-bottom: 1px solid var(--border);
+            padding: 12px 14px;
+            vertical-align: middle;
+            color: #2b3d5c;
+        }
+
+        .badge-status-green {
+            background: rgba(34, 150, 144, 0.08);
+            color: #0f766e;
+            border: 1px solid rgba(34,150,144,0.12);
+        }
+
+        .badge-status-yellow {
+            background: rgba(244, 180, 26, 0.1);
+            color: #a16207;
+            border: 1px solid rgba(244,180,26,0.15);
+        }
+
+        .badge-status-red {
+            background: rgba(217, 61, 71, 0.08);
+            color: #b91c1c;
+            border: 1px solid rgba(217,61,71,0.15);
+        }
+
+        .badge-status-blocked {
+            background: rgba(27, 59, 111, 0.06);
+            color: #1d4ed8;
+            border: 1px solid rgba(27,59,111,0.12);
+        }
+
+        .score-circle {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 20px;
+            margin-left: auto;
+        }
+
+        .score-safe {
+            background: rgba(34, 150, 144, 0.08);
+            border: 3px solid #229690;
+            color: #0f766e;
+            box-shadow: 0 0 15px rgba(34, 150, 144, 0.12);
+        }
+
+        .score-warn {
+            background: rgba(244, 180, 26, 0.08);
+            border: 3px solid #f4b41a;
+            color: #a16207;
+            box-shadow: 0 0 15px rgba(244, 180, 26, 0.14);
+        }
+
+        .score-crit {
+            background: rgba(217, 61, 71, 0.08);
+            border: 3px solid #d93d47;
+            color: #b91c1c;
+            box-shadow: 0 0 15px rgba(217, 61, 71, 0.12);
+        }
+
+        .advisory-banner {
+            border-radius: 14px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 22px var(--shadow);
+        }
+
+        .advisory-safe {
+            background: #edfaf7;
+            border: 1px solid rgba(34, 150, 144, 0.12);
+            color: #0f766e;
+        }
+
+        .advisory-threat {
+            background: #fff1f2;
+            border: 1px solid rgba(217, 61, 71, 0.15);
+            color: #7a2c2c;
+        }
+    </style>
+</head>
+
+<body>
+    {% include '_sidebar.html' %}
+
+    <main class="shell">
+        <!-- Header -->
+        <header class="top-header">
+            <div>
+                <h1><i class="fa-solid fa-chart-pie text-primary me-2"></i> Security Analytics</h1>
+                <p>Live telemetry, threat distribution, and incident response analytics from your network.</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <form method="post" action="{{ url_for('scan_network') }}" class="m-0">
+                    <button type="submit"
+                        class="btn btn-sm btn-outline-primary d-flex align-items-center gap-2 px-3 py-2 rounded-pill fw-semibold">
+                        <i class="fa-solid fa-satellite-dish"></i> Refresh Telemetry
+                    </button>
+                </form>
+                <a href="{{ url_for('dashboard') }}"
+                    class="btn btn-sm btn-outline-secondary px-3 py-2 rounded-pill fw-semibold">
+                    <i class="fa-solid fa-arrow-left me-1"></i> Dashboard
+                </a>
+            </div>
+        </header>
+
+        <!-- Dynamic Security Advisory Banner -->
+        {% if active_threats > 0 %}
+        <div class="advisory-banner advisory-threat">
+            <i class="fa-solid fa-triangle-exclamation text-danger fs-3"></i>
+            <div class="flex-grow-1">
+                <strong class="text-white">Active ARP Spoofing Conflict Detected!</strong>
+                <div class="small mt-1">{{ active_threats }} unauthorized device(s) claiming conflicting MAC identity.
+                    Immediate containment recommended.</div>
+            </div>
+            <a href="{{ url_for('alerts') }}" class="btn btn-danger btn-sm px-3 py-2 rounded-pill fw-bold">View Active
+                Alerts</a>
+        </div>
+        {% else %}
+        <div class="advisory-banner advisory-safe">
+            <i class="fa-solid fa-shield-check text-success fs-3"></i>
+            <div class="flex-grow-1">
+                <strong class="text-white">Subnet Integrity Optimal</strong>
+                <div class="small mt-1">All {{ total_devices }} connected host(s) verified on subnet 192.168.1.0/24.
+                    Gateway binding verified at 192.168.1.1.</div>
+            </div>
+            <span class="badge badge-status-green px-3 py-2 rounded-pill fw-semibold">All Devices Monitored</span>
+        </div>
+        {% endif %}
+
+        <!-- Top 5 Real-Time KPI Cards -->
+        <div class="row g-3 mb-4">
+            <!-- Security Health Score -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="card-dark d-flex flex-column justify-content-between">
+                    <div class="d-flex align-items-start justify-content-between">
+                        <div>
+                            <div class="kpi-title">Security Health Index</div>
+                            <div
+                                class="kpi-value {{ 'text-success' if security_score >= 80 else ('text-warning' if security_score >= 50 else 'text-danger') }}">
+                                {{ security_score }}%
+                            </div>
+                            <div class="kpi-sub">
+                                {% if security_score >= 80 %}
+                                <i class="fa-solid fa-circle-check text-success me-1"></i> Low Risk Posture
+                                {% elif security_score >= 50 %}
+                                <i class="fa-solid fa-triangle-exclamation text-warning me-1"></i> Elevated Risk
+                                {% else %}
+                                <i class="fa-solid fa-circle-xmark text-danger me-1"></i> Critical Risk Detected
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div
+                            class="score-circle {{ 'score-safe' if security_score >= 80 else ('score-warn' if security_score >= 50 else 'score-crit') }}">
+                            {{ security_score }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Subnet Nodes -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="card-dark">
+                    <div class="kpi-title">
+                        <span>Connected Nodes</span>
+                        <i class="fa-solid fa-network-wired text-primary"></i>
+                    </div>
+                    <div class="kpi-value text-primary">{{ total_devices }} <span class="fs-6 text-muted fw-normal">/
+                            254 IPs</span></div>
+                    <div class="progress mt-2 mb-1" style="height: 6px; background: #1e293b;">
+                        <div class="progress-bar bg-primary" role="progressbar"
+                            style="width: {{ subnet_utilization }}%;"></div>
+                    </div>
+                    <div class="kpi-sub">{{ subnet_utilization }}% Subnet capacity utilized</div>
+                </div>
+            </div>
+
+            <!-- ARP Poisoning Threats -->
+            <div class="col-12 col-md-6 col-lg-2">
+                <div class="card-dark">
+                    <div class="kpi-title">
+                        <span>Spoofing Threats</span>
+                        <i class="fa-solid fa-bolt text-danger"></i>
+                    </div>
+                    <div class="kpi-value {{ 'text-danger' if threats > 0 else 'text-white' }}">{{ threats }}</div>
+                    <div class="kpi-sub">
+                        <span class="text-danger fw-semibold">{{ active_threats }} active</span> &bull; {{ blocked }}
+                        blocked
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mitigation Rate -->
+            <div class="col-12 col-md-6 col-lg-2">
+                <div class="card-dark">
+                    <div class="kpi-title">
+                        <span>Mitigation Rate</span>
+                        <i class="fa-solid fa-hand-shield text-info"></i>
+                    </div>
+                    <div class="kpi-value text-info">{{ mitigation_rate }}%</div>
+                    <div class="kpi-sub">{{ blocked }} of {{ threats }} threats contained</div>
+                </div>
+            </div>
+
+            <!-- Total Security Actions -->
+            <div class="col-12 col-md-6 col-lg-2">
+                <div class="card-dark">
+                    <div class="kpi-title">
+                        <span>Response Events</span>
+                        <i class="fa-solid fa-clipboard-check text-success"></i>
+                    </div>
+                    <div class="kpi-value text-success">{{ total_actions }}</div>
+                    <div class="kpi-sub">Logged in shift records</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4 Visual Analytics Charts (2x2 Grid) -->
+        <div class="row g-4 mb-4">
+            <!-- Chart 1: Device Security Breakdown (Donut) -->
+            <div class="col-12 col-lg-6">
+                <div class="card-dark">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <h6 class="fw-bold text-white mb-0">Device Security Status Breakdown</h6>
+                            <small class="text-muted">Proportion of trusted, unreviewed, and rogue devices.</small>
+                        </div>
+                        <span class="badge bg-dark text-muted border border-secondary px-2 py-1">Real-Time</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="deviceStatusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart 2: Security Timeline (Line Area) -->
+            <div class="col-12 col-lg-6">
+                <div class="card-dark">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <h6 class="fw-bold text-white mb-0">Incident & Defense Timeline</h6>
+                            <small class="text-muted">Chronological frequency of detected threats vs. staff
+                                responses.</small>
+                        </div>
+                        <span class="badge bg-dark text-muted border border-secondary px-2 py-1">Shift Events</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart 3: Subnet Address Density (Bar) -->
+            <div class="col-12 col-lg-6">
+                <div class="card-dark">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <h6 class="fw-bold text-white mb-0">Subnet IP Allocation Distribution</h6>
+                            <small class="text-muted">Host density across 192.168.1.x octet segments.</small>
+                        </div>
+                        <span class="badge bg-dark text-muted border border-secondary px-2 py-1">/24 Subnet</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="subnetDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart 4: Action Types Breakdown (Bar) -->
+            <div class="col-12 col-lg-6">
+                <div class="card-dark">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <h6 class="fw-bold text-white mb-0">Security Action Categories</h6>
+                            <small class="text-muted">Distribution of threat detections, blocks, and scan
+                                operations.</small>
+                        </div>
+                        <span class="badge bg-dark text-muted border border-secondary px-2 py-1">Operations</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="actionTypeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- High-Risk Threats & Incident Containment Table -->
+        <div class="card-dark mb-4">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div>
+                    <h6 class="fw-bold text-white mb-0"><i class="fa-solid fa-shield-virus text-danger me-2"></i> Threat
+                        & High-Risk Nodes Matrix</h6>
+                    <small class="text-muted">Devices flagged for ARP conflicts, MAC duplication, or containment
+                        action.</small>
+                </div>
+                <a href="{{ url_for('alerts') }}" class="btn btn-sm btn-outline-danger px-3 py-1 rounded-pill">Manage in
+                    Alerts &rarr;</a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-custom align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>IP Address</th>
+                            <th>Physical MAC Address</th>
+                            <th>Device Identification</th>
+                            <th>Risk State</th>
+                            <th>Access Status</th>
+                            <th>Last Activity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dev in threat_devices %}
+                        <tr>
+                            <td><strong class="text-white font-monospace">{{ dev.ip_address }}</strong></td>
+                            <td><span class="font-monospace text-muted">{{ dev.mac_address }}</span></td>
+                            <td>{{ dev.device_name }}</td>
+                            <td>
+                                {% if dev.status == 'red' %}
+                                <span class="badge badge-status-red"><i
+                                        class="fa-solid fa-triangle-exclamation me-1"></i> Spoofing Threat</span>
+                                {% elif dev.status == 'yellow' %}
+                                <span class="badge badge-status-yellow"><i class="fa-solid fa-eye me-1"></i> Review
+                                    Required</span>
+                                {% else %}
+                                <span class="badge badge-status-green"><i class="fa-solid fa-check me-1"></i>
+                                    Trusted</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if dev.is_blocked %}
+                                <span class="badge badge-status-blocked"><i class="fa-solid fa-ban me-1"></i> Blocked
+                                    (Restricted)</span>
+                                {% else %}
+                                <span class="badge badge-status-green"><i class="fa-solid fa-wifi me-1"></i>
+                                    Active</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted">{{ dev.last_seen }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-circle-check text-success fs-4 d-block mb-2"></i>
+                                No active or historical rogue threats in the incident table. Subnet is clean.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Chart.js Data Initialization Scripts -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Chart defaults
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.borderColor = '#1f2937';
+            Chart.defaults.font.family = "'Segoe UI', sans-serif";
+
+            // 1. Device Security Breakdown Donut Chart
+            const ctx1 = document.getElementById('deviceStatusChart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Trusted Devices', 'Review Required', 'Spoofing Threats', 'Blocked Nodes'],
+                    datasets: [{
+                        data: [{{ trusted }}, {{ review }}, {{ active_threats }}, {{ blocked }}],
+            backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#3b82f6'],
+            borderWidth: 2,
+            borderColor: '#111827'
+                    }]
+                },
+            options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15 } }
+            },
+            cutout: '70%'
+        }
+            });
+
+        // 2. Incident & Defense Timeline Chart
+        const ctx2 = document.getElementById('timelineChart').getContext('2d');
+        new Chart(ctx2, {
+            type: 'line',
+            data: {
+                labels: {{ timeline_labels | tojson }},
+            datasets: [
+            {
+                label: 'Threats Detected',
+                data: {{ timeline_threats | tojson }},
+            borderColor: '#ef4444',
+            backgroundColor: 'rgba(239, 68, 68, 0.15)',
+            fill: true,
+            tension: 0.35,
+            borderWidth: 2,
+            pointRadius: 4,
+            pointBackgroundColor: '#ef4444'
+                        },
+            {
+                label: 'Defensive Actions',
+                data: {{ timeline_responses | tojson }},
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.15)',
+            fill: true,
+            tension: 0.35,
+            borderWidth: 2,
+            pointRadius: 4,
+            pointBackgroundColor: '#3b82f6'
+                        }
+        ]
+                },
+            options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15 } }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                }
+            }
+        }
+            });
+
+        // 3. Subnet IP Octet Distribution Chart
+        const ctx3 = document.getElementById('subnetDistributionChart').getContext('2d');
+        new Chart(ctx3, {
+            type: 'bar',
+            data: {
+                labels: {{ octet_labels | tojson }},
+            datasets: [{
+                label: 'Active IP Count',
+                data: {{ octet_counts | tojson }},
+            backgroundColor: '#3b82f6',
+            borderRadius: 6
+                    }]
+                },
+            options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+            });
+
+        // 4. Action Type Categories Chart
+        const ctx4 = document.getElementById('actionTypeChart').getContext('2d');
+        new Chart(ctx4, {
+            type: 'bar',
+            data: {
+                labels: {{ action_type_labels | tojson }},
+            datasets: [{
+                label: 'Recorded Operations',
+                data: {{ action_type_counts | tojson }},
+            backgroundColor: ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'],
+            borderRadius: 6
+                    }]
+                },
+            options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 }
+                },
+                y: {
+                    grid: { display: false }
+                }
+            }
+        }
+            });
+        });
+    </script>
+</body>
+
+</html>

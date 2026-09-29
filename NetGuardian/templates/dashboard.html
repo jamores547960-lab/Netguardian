@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetGuardian - Network Monitoring</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #edf4ff;
+            --bg-2: #edfaf8;
+            --surface: #ffffff;
+            --surface-soft: #f6f9ff;
+            --border: #dfeaf9;
+            --text: #152744;
+            --muted: #5d728d;
+            --primary: #1b3b6f;
+            --primary-2: #2f6ab2;
+            --secondary: #229690;
+            --accent: #f4b41a;
+            --danger: #dc2626;
+            --success: #16a34a;
+            --shadow: rgba(15, 35, 71, 0.08);
+        }
+
+        .text-bright { color: var(--text) !important; }
+        .text-muted { color: var(--muted) !important; }
+
+        body {
+            background: linear-gradient(135deg, var(--bg) 0%, var(--bg-2) 100%);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .sidebar {
+            width: 240px;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: linear-gradient(180deg, #ffffff 0%, #edf5ff 100%);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 1.5rem 1rem;
+            z-index: 100;
+            box-shadow: 12px 0 28px rgba(15,35,71,0.06);
+        }
+
+        .sidebar .nav-link {
+            color: var(--text);
+            padding: 0.7rem 0.9rem;
+            border-radius: 12px;
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: linear-gradient(135deg, #edf4ff 0%, #eaf9f8 100%);
+            color: var(--primary);
+            border-color: #d8e7fb;
+            box-shadow: 0 8px 18px rgba(27,59,111,0.08);
+        }
+
+        .main-content {
+            margin-left: 240px;
+            padding: 2rem;
+        }
+
+        .dark-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            box-shadow: 0 12px 30px var(--shadow);
+        }
+
+        .metric-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 1.25rem;
+            box-shadow: 0 12px 30px var(--shadow);
+        }
+
+        .metric-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .table-dark-custom {
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--text);
+            border-color: var(--border);
+        }
+
+        .table-dark-custom th {
+            color: var(--muted);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.75rem;
+        }
+
+        .table-dark-custom td {
+            border-bottom: 1px solid var(--border);
+            padding: 0.85rem 0.5rem;
+            vertical-align: middle;
+            font-size: 0.875rem;
+            color: #2b3f5d;
+        }
+
+        .badge-pulse-green {
+            background-color: rgba(22, 163, 74, 0.08);
+            color: #15803d;
+            border: 1px solid rgba(22, 163, 74, 0.18);
+            font-weight: 700;
+        }
+
+        .badge-risk-Critical { background-color: rgba(220, 38, 38, 0.08); color: #b91c1c; border: 1px solid rgba(220,38,38,0.18); }
+        .badge-risk-High { background-color: rgba(249, 115, 22, 0.08); color: #c2410c; border: 1px solid rgba(249,115,22,0.18); }
+        .badge-risk-Medium { background-color: rgba(244, 180, 26, 0.1); color: #a16207; border: 1px solid rgba(244,180,26,0.2); }
+        .badge-risk-Low { background-color: rgba(22, 163, 74, 0.08); color: #15803d; border: 1px solid rgba(22,163,74,0.18); }
+        .badge-status-detected { background-color: rgba(59, 130, 246, 0.08); color: #1d4ed8; border: 1px solid rgba(59,130,246,0.16); }
+
+        .secondary-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 1.25rem;
+            height: 100%;
+            box-shadow: 0 12px 30px var(--shadow);
+        }
+
+        .secondary-title {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .secondary-value {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text);
+            margin-top: 0.6rem;
+            line-height: 1;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 240px;
+            width: 100%;
+        }
+
+        .threat-table th,
+        .threat-table td {
+            border-color: var(--border);
+            color: var(--text);
+        }
+
+        .threat-table th {
+            color: var(--muted);
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-pill {
+            border-radius: 999px;
+            padding: 0.35rem 0.7rem;
+            font-size: 0.72rem;
+            font-weight: 800;
+        }
+
+        .status-bad {
+            background-color: rgba(220, 38, 38, 0.08);
+            color: #b91c1c;
+            border: 1px solid rgba(220, 38, 38, 0.15);
+        }
+
+        .status-good {
+            background-color: rgba(22, 163, 74, 0.08);
+            color: #15803d;
+            border: 1px solid rgba(22, 163, 74, 0.18);
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Left Navigation Sidebar -->
+    <div class="sidebar">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-4 px-2">
+                <i class="fa-solid fa-shield-halved text-primary fs-3"></i>
+                <div>
+                    <h5 class="fw-bold text-bright mb-0" style="line-height: 1;">NetGuardian</h5>
+                    <small class="text-muted" style="font-size: 10px;">NETWORK DEFENSE</small>
+                </div>
+            </div>
+            <nav class="nav flex-column">
+                <a class="nav-link" href="{{ url_for('overview') }}"><i class="fa-solid fa-border-all"></i> Dashboard</a>
+                <a class="nav-link active" href="{{ url_for('dashboard') }}"><i class="fa-solid fa-chart-line"></i> Monitoring</a>
+                <a class="nav-link" href="{{ url_for('alerts') }}"><i class="fa-solid fa-triangle-exclamation"></i> Alerts</a>
+                <a class="nav-link" href="{{ url_for('devices') }}"><i class="fa-solid fa-user-secret"></i> Devices</a>
+                <a class="nav-link" href="{{ url_for('logs') }}"><i class="fa-solid fa-file-lines"></i> Logs</a>
+                <a class="nav-link" href="{{ url_for('analytics') }}"><i class="fa-solid fa-chart-pie"></i> Analytics</a>
+                <a class="nav-link" href="{{ url_for('reports') }}"><i class="fa-solid fa-file-invoice"></i> Reports</a>
+            </nav>
+        </div>
+        <div>
+            <nav class="nav flex-column">
+                <a class="nav-link" href="#"><i class="fa-solid fa-gear"></i> Settings</a>
+                <a class="nav-link text-danger" href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Main Content Panel -->
+    <div class="main-content">
+        <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+            <div>
+                <h3 class="fw-bold text-bright mb-1">Network Monitoring</h3>
+                <p class="text-muted small mb-0">Real-time monitoring of live devices and ARP spoofing detection.</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <form method="post" action="{{ url_for('scan_network') }}" class="m-0">
+                    <button type="submit" class="btn btn-sm btn-primary d-flex align-items-center gap-2 px-3 py-2 rounded-pill shadow-sm" style="font-weight:600; font-size: 13px;">
+                        <i class="fa-solid fa-satellite-dish"></i> Scan Real Network
+                    </button>
+                </form>
+                <form method="post" action="{{ url_for('simulate_threat') }}" class="m-0">
+                    <button type="submit" class="btn btn-sm btn-outline-danger d-flex align-items-center gap-2 px-3 py-2 rounded-pill shadow-sm" style="font-weight:600; font-size: 13px;">
+                        <i class="fa-solid fa-bolt"></i> Test Threat
+                    </button>
+                </form>
+                <span class="badge badge-pulse-green px-3 py-2 rounded-pill">
+                    <i class="fa-solid fa-circle me-1 fs-7"></i> Monitoring Active
+                </span>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show mb-4 rounded-3 border-0" role="alert" style="background: rgba(30, 41, 59, 0.9); border: 1px solid #3b82f6; color: #dbeafe;">
+                        <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Dynamic Metric KPI Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <small class="text-muted text-uppercase fw-semibold" style="font-size: 11px;">Total Events</small>
+                    <div class="metric-value mt-2">{{ total_events }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <small class="text-muted text-uppercase fw-semibold" style="font-size: 11px;">Unique IP Addresses</small>
+                    <div class="metric-value mt-2">{{ unique_ips }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <small class="text-muted text-uppercase fw-semibold" style="font-size: 11px;">High-Risk Events</small>
+                    <div class="metric-value mt-2">{{ high_risk_events }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <small class="text-muted text-uppercase fw-semibold" style="font-size: 11px;">Critical Events</small>
+                    <div class="metric-value mt-2">{{ critical_events }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-lg-3 col-md-6">
+                <div class="secondary-card">
+                    <div class="secondary-title">Security Health</div>
+                    <div class="secondary-value {{ 'text-success' if security_score >= 80 else ('text-warning' if security_score >= 50 else 'text-danger') }}">{{ security_score }}%</div>
+                    <div class="small text-muted mt-2">{% if security_score >= 80 %}Low risk posture{% elif security_score >= 50 %}Elevated risk{% else %}Critical risk{% endif %}</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="secondary-card">
+                    <div class="secondary-title">Connected Nodes</div>
+                    <div class="secondary-value text-primary">{{ total_devices }}</div>
+                    <div class="small text-muted mt-2">{{ subnet_utilization }}% of subnet capacity</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="secondary-card">
+                    <div class="secondary-title">Spoofing Threats</div>
+                    <div class="secondary-value {{ 'text-danger' if threats > 0 else 'text-white' }}">{{ threats }}</div>
+                    <div class="small text-muted mt-2">{{ active_threats }} active / {{ blocked }} blocked</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="secondary-card">
+                    <div class="secondary-title">Mitigation Rate</div>
+                    <div class="secondary-value text-info">{{ mitigation_rate }}%</div>
+                    <div class="small text-muted mt-2">{{ blocked }} of {{ threats }} threats contained</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="dark-card p-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <h5 class="fw-bold text-bright mb-0">Device Security Status</h5>
+                            <small class="text-muted">Trusted, review, and threat distribution.</small>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="deviceStatusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="dark-card p-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <div>
+                            <h5 class="fw-bold text-bright mb-0">Incident Timeline</h5>
+                            <small class="text-muted">Threats vs. response actions.</small>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dark-card p-4 mb-4">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div>
+                    <h5 class="fw-bold text-bright mb-0">Threat & High-Risk Nodes Matrix</h5>
+                    <small class="text-muted">Devices flagged for ARP conflicts or restricted access.</small>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-dark-custom align-middle mb-0 threat-table">
+                    <thead>
+                        <tr>
+                            <th>IP</th>
+                            <th>MAC</th>
+                            <th>Device</th>
+                            <th>State</th>
+                            <th>Access</th>
+                            <th>Last Seen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dev in threat_devices %}
+                        <tr>
+                            <td class="text-bright">{{ dev.ip_address }}</td>
+                            <td>{{ dev.mac_address }}</td>
+                            <td>{{ dev.device_name }}</td>
+                            <td>
+                                {% if dev.status == 'red' %}
+                                <span class="status-pill status-bad">Spoofing</span>
+                                {% else %}
+                                <span class="status-pill status-good">Trusted</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if dev.is_blocked %}
+                                <span class="status-pill status-bad">Blocked</span>
+                                {% else %}
+                                <span class="status-pill status-good">Active</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ dev.last_seen }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-3">No active/blocked threats in the current inventory.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Live Activity Log Section (Database Query Loop) -->
+        <div class="dark-card p-4 mb-4">
+            <div class="d-flex align-items-center justify-content-between mb-3" id="activity">
+                <div>
+                    <h5 class="fw-bold text-bright mb-0">Live Network Activity</h5>
+                    <small class="text-muted">Latest devices and threats detected by NetGuardian.</small>
+                </div>
+                <span class="badge bg-success text-white px-2 py-1 rounded-pill" style="font-size: 10px;">
+                    <i class="fa-solid fa-circle me-1"></i> LIVE
+                </span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-dark-custom align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>IP Address</th>
+                            <th>Username</th>
+                            <th>Attack Type</th>
+                            <th>Activity</th>
+                            <th>Risk</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in events %}
+                        <tr>
+                            <td class="text-muted">{{ event.timestamp }}</td>
+                            <td class="text-bright">{{ event.ip_address }}</td>
+                            <td>{{ event.username }}</td>
+                            <td class="text-bright">{{ event.attack_type }}</td>
+                            <td>{{ event.activity }}</td>
+                            <td><span class="badge badge-risk-{{ event.risk_level }}">{{ event.risk_level }}</span></td>
+                            <td><span class="badge badge-status-detected">{{ event.status }}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-3">No attack activity logged yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Detection Monitoring Section -->
+        <div class="dark-card p-4">
+            <div class="mb-3">
+                <h5 class="fw-bold text-bright mb-0">Detection Monitoring</h5>
+                <small class="text-muted">Threat types monitored by the NetGuardian sensor.</small>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-dark-custom align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Detection Type</th>
+                            <th>Description</th>
+                            <th class="text-end pe-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for detection in detections %}
+                        <tr>
+                            <td class="text-bright fw-semibold">
+                                <i class="fa-solid {{ detection.icon }} me-2 text-primary"></i>{{ detection.name }}
+                            </td>
+                            <td>{{ detection.description }}</td>
+                            <td class="text-end pe-3">
+                                <span class="badge bg-secondary text-light px-2 py-1">{{ detection.status }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.borderColor = '#1f2937';
+            Chart.defaults.font.family = "'Segoe UI', sans-serif";
+
+            const statusCtx = document.getElementById('deviceStatusChart').getContext('2d');
+            new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Trusted Devices', 'Review Required', 'Spoofing Threats', 'Blocked Nodes'],
+                    datasets: [{
+                        data: [{{ trusted }}, {{ review }}, {{ active_threats }}, {{ blocked }}],
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#3b82f6'],
+                        borderWidth: 2,
+                        borderColor: '#111827'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15 } }
+                    },
+                    cutout: '70%'
+                }
+            });
+
+            const timelineCtx = document.getElementById('timelineChart').getContext('2d');
+            new Chart(timelineCtx, {
+                type: 'line',
+                data: {
+                    labels: {{ timeline_labels | tojson }},
+                    datasets: [
+                        {
+                            label: 'Threats Detected',
+                            data: {{ timeline_threats | tojson }},
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                            fill: true,
+                            tension: 0.35,
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#ef4444'
+                        },
+                        {
+                            label: 'Defensive Actions',
+                            data: {{ timeline_responses | tojson }},
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                            fill: true,
+                            tension: 0.35,
+                            borderWidth: 2,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#3b82f6'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15 } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
